@@ -1,4 +1,4 @@
-package graph.common;
+package common;
 
 import java.util.Arrays;
 

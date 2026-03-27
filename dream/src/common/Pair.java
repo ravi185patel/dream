@@ -1,4 +1,4 @@
-package graph.common;
+package common;
 
 public class Pair {
     public int node;

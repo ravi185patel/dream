@@ -1,10 +1,9 @@
 package graph.takeuforward;
 
 import graph.basic.UnionDisjointByRankOrWeight;
-import graph.common.CommonUtil;
+import common.CommonUtil;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class MakingLargeIsland {

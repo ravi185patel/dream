@@ -1,6 +1,6 @@
 package graph.takeuforward;
 
-import graph.common.CommonUtil;
+import common.CommonUtil;
 
 import java.util.Arrays;
 import java.util.LinkedList;

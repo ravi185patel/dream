@@ -1,7 +1,7 @@
 package graph.takeuforward;
 
-import graph.common.CommonUtil;
-import graph.common.Pair;
+import common.CommonUtil;
+import common.Pair;
 
 import java.util.*;
 
