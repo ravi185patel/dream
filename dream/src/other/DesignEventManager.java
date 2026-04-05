@@ -1,3 +1,6 @@
+
+package other;
+
 import java.util.*;
 
 class EventManager {
@@ -53,8 +56,8 @@ class EventManager {
 }
 
 /**
- * Your EventManager object will be instantiated and called as such:
- * EventManager obj = new EventManager(events);
+ * Your other.EventManager object will be instantiated and called as such:
+ * other.EventManager obj = new other.EventManager(events);
  * obj.updatePriority(eventId,newPriority);
  * int param_2 = obj.pollHighest();
  */

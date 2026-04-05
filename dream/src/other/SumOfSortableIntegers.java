@@ -1,3 +1,5 @@
+package other;
+
 public class SumOfSortableIntegers {
 
     public static void main(String[] args) {

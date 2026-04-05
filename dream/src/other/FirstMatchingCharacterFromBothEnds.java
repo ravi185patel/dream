@@ -1,3 +1,5 @@
+package other;
+
 public class FirstMatchingCharacterFromBothEnds {
 
     public static void main(String[] args) {

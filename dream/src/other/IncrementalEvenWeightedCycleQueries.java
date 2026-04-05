@@ -1,3 +1,5 @@
+package other;
+
 import graph.basic.UnionDisjointByRankOrWeight;
 
 public class IncrementalEvenWeightedCycleQueries {

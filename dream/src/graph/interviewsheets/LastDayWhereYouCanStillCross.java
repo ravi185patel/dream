@@ -18,7 +18,8 @@ public class LastDayWhereYouCanStillCross {
         
     }
     public static int latestDayToCross(int row,int col,int [][]cells){
-        return latestDayToCrossBs(row,col,cells);
+//        return latestDayToCrossBs(row,col,cells);
+        return latestDayToCrossBfs(row,col,cells);
     }
     public static int dirs[][]={{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
@@ -33,7 +34,7 @@ public class LastDayWhereYouCanStillCross {
             grid[cellX][cellY] = 1;
             boolean flag = isPossibleToReachTopToBottom(row,col,grid);
             if(!flag){
-                return i-1;
+                return i;
             }
         }
         return -1;
@@ -96,10 +97,10 @@ public class LastDayWhereYouCanStillCross {
         Queue<int[]> queue = new LinkedList<>();
         for(int j=0;j<col;j++){
             if(grid[0][j] == 0){
-                queue.offer(new int[]{0,j});
-                grid[0][j] = -1;
+                queue.add(new int[]{0,j});
             }
         }
+        Set<String> set=new HashSet<>();
         while(!queue.isEmpty()){
             int size = queue.size();
             for(int i=0;i<size;i++) {
@@ -113,10 +114,10 @@ public class LastDayWhereYouCanStillCross {
                     int newCellX = dir[0] + cellX;
                     int newCellY = dir[1] + cellY;
                     if (newCellX < 0 || newCellX >= row || newCellY < 0 || newCellY >= col
-                            || grid[newCellX][newCellY] == 0) {
+                            || grid[newCellX][newCellY] == 1 || set.contains(newCellX + "," + newCellY)) {
                         continue;
                     }
-                    grid[newCellX][newCellY] = -1;
+                    set.add(newCellX + "," + newCellY);
                     queue.add(new int[]{newCellX, newCellY});
                 }
             }
