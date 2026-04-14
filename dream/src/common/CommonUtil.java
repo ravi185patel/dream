@@ -10,5 +10,11 @@ public class CommonUtil {
         System.out.println(Arrays.toString(arr));
     }
 
+    public static void print(int arr[][]){
+        for(int row[]:arr){
+           print(row);
+        }
+    }
+
 
 }

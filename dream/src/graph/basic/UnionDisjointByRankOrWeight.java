@@ -98,4 +98,8 @@ public class UnionDisjointByRankOrWeight {
         }
         return true;
     }
+
+    public int getSize(int node) {
+        return size[find(node)];
+    }
 }

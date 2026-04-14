@@ -1,0 +1,520 @@
+Low-Level Design: Distributed Cache System
+1. Requirements Clarification
+Functional Requirements
+Put(key, value) — Store a key-value pair
+Get(key) — Retrieve value by key
+Delete(key) — Remove a key-value pair
+TTL support — Keys expire after a configurable time
+Eviction policies — LRU, LFU, or FIFO when memory is full
+Non-Functional Requirements
+Low latency — Sub-millisecond reads (p99 < 5ms)
+High availability — Survive node failures
+Scalability — Handle millions of QPS, petabytes of data
+Consistency — Tunable (strong vs eventual)
+Fault tolerance — No single point of failure
+Capacity Estimation
+100M daily active users, 10 reads/user/day → ~12K QPS reads
+Write:Read ratio = 1:10 → ~1.2K QPS writes
+Average key: 50 bytes, value: 1KB → ~1KB per entry
+100M keys → ~100GB total data
+2. High-Level Architecture
+
+
+
+
+
+
+Cache Cluster
+
+Cache Proxy Layer
+
+Clients
+
+Shard N
+
+Shard 2
+
+Shard 1
+
+Client 1
+
+Client 2
+
+Client N
+
+Proxy 1
+
+Proxy 2
+
+Node 1 Primary
+
+Node 1 Replica
+
+Node 2 Primary
+
+Node 2 Replica
+
+Node N Primary
+
+Node N Replica
+
+Configuration Service
+ZooKeeper/etcd
+
+3. Core Components Deep Dive
+3.1 Data Structures
+java
+
+
+public class CacheEntry {
+    private String key;
+    private byte[] value;
+    private long createdAt;
+    private long ttlMs;
+    private long lastAccessedAt;
+    private int accessCount;  // For LFU
+    
+    public boolean isExpired() {
+        return System.currentTimeMillis() > createdAt + ttlMs;
+    }
+}
+In-Memory Storage — HashMap + Doubly Linked List (for LRU)
+
+java
+
+
+public class LRUCache {
+    private final int capacity;
+    private final Map<String, Node> map;
+    private final DoublyLinkedList dll;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    
+    public byte[] get(String key) {
+        lock.readLock().lock();
+        try {
+            Node node = map.get(key);
+            if (node == null || node.entry.isExpired()) {
+                return null;
+            }
+            // Move to front (most recently used)
+            promoteNode(node);
+            return node.entry.value;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    
+    public void put(String key, byte[] value, long ttlMs) {
+        lock.writeLock().lock();
+        try {
+            if (map.containsKey(key)) {
+                updateExisting(key, value, ttlMs);
+            } else {
+                if (map.size() >= capacity) {
+                    evictLRU();
+                }
+                insertNew(key, value, ttlMs);
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    private void evictLRU() {
+        Node tail = dll.removeTail();
+        map.remove(tail.entry.key);
+    }
+}
+3.2 Consistent Hashing for Partitioning
+java
+
+
+public class ConsistentHashRing {
+    private final TreeMap<Long, String> ring = new TreeMap<>();
+    private final int virtualNodes;
+    private final HashFunction hashFunction;
+    
+    public ConsistentHashRing(int virtualNodes) {
+        this.virtualNodes = virtualNodes;  // Typically 100-200
+        this.hashFunction = Hashing.murmur3_128();
+    }
+    
+    public void addNode(String nodeId) {
+        for (int i = 0; i < virtualNodes; i++) {
+            long hash = hash(nodeId + "#" + i);
+            ring.put(hash, nodeId);
+        }
+    }
+    
+    public void removeNode(String nodeId) {
+        for (int i = 0; i < virtualNodes; i++) {
+            long hash = hash(nodeId + "#" + i);
+            ring.remove(hash);
+        }
+    }
+    
+    public String getNode(String key) {
+        if (ring.isEmpty()) return null;
+        long hash = hash(key);
+        // Find first node clockwise
+        Map.Entry<Long, String> entry = ring.ceilingEntry(hash);
+        return (entry != null) ? entry.getValue() : ring.firstEntry().getValue();
+    }
+    
+    // Get N nodes for replication
+    public List<String> getNodes(String key, int count) {
+        Set<String> nodes = new LinkedHashSet<>();
+        long hash = hash(key);
+        
+        for (Map.Entry<Long, String> entry : ring.tailMap(hash).entrySet()) {
+            nodes.add(entry.getValue());
+            if (nodes.size() == count) break;
+        }
+        
+        if (nodes.size() < count) {
+            for (Map.Entry<Long, String> entry : ring.entrySet()) {
+                nodes.add(entry.getValue());
+                if (nodes.size() == count) break;
+            }
+        }
+        return new ArrayList<>(nodes);
+    }
+    
+    private long hash(String key) {
+        return hashFunction.hashString(key, StandardCharsets.UTF_8).asLong();
+    }
+}
+3.3 Cache Node Server
+java
+
+
+public class CacheNode {
+    private final String nodeId;
+    private final LRUCache localCache;
+    private final ReplicationManager replicationManager;
+    private final ExpirationManager expirationManager;
+    
+    public CompletableFuture<byte[]> get(String key) {
+        byte[] value = localCache.get(key);
+        return CompletableFuture.completedFuture(value);
+    }
+    
+    public CompletableFuture<Boolean> put(String key, byte[] value, long ttl) {
+        localCache.put(key, value, ttl);
+        
+        // Async replication to replicas
+        return replicationManager.replicate(key, value, ttl);
+    }
+    
+    public CompletableFuture<Boolean> delete(String key) {
+        localCache.delete(key);
+        return replicationManager.replicateDelete(key);
+    }
+}
+3.4 Expiration Strategies
+java
+
+
+public class ExpirationManager {
+    // Lazy expiration: check on access
+    // Active expiration: background thread
+    
+    private final DelayQueue<ExpirableKey> expirationQueue;
+    private final LRUCache cache;
+    
+    public ExpirationManager(LRUCache cache) {
+        this.cache = cache;
+        this.expirationQueue = new DelayQueue<>();
+        startExpirationThread();
+    }
+    
+    public void scheduleExpiration(String key, long ttlMs) {
+        expirationQueue.offer(new ExpirableKey(key, ttlMs));
+    }
+    
+    private void startExpirationThread() {
+        Thread expirationThread = new Thread(() -> {
+            while (true) {
+                try {
+                    ExpirableKey expired = expirationQueue.take();
+                    cache.deleteIfExpired(expired.key);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        });
+        expirationThread.setDaemon(true);
+        expirationThread.start();
+    }
+    
+    static class ExpirableKey implements Delayed {
+        final String key;
+        final long expireAt;
+        
+        // Delayed interface implementation...
+    }
+}
+4. Replication Strategy
+
+
+
+
+
+
+Read Path - Option B
+
+Read from any
+
+Client
+
+Primary or Replica
+
+Read Path - Option A
+
+Client
+
+Primary Only
+
+Write Path
+
+Sync/Async
+
+Sync/Async
+
+Client
+
+Primary
+
+Replica1
+
+Replica2
+
+java
+
+
+public class ReplicationManager {
+    private final List<CacheNodeClient> replicas;
+    private final ReplicationMode mode;  // SYNC, ASYNC, SEMI_SYNC
+    
+    public CompletableFuture<Boolean> replicate(String key, byte[] value, long ttl) {
+        List<CompletableFuture<Boolean>> futures = replicas.stream()
+            .map(replica -> replica.put(key, value, ttl))
+            .collect(Collectors.toList());
+        
+        switch (mode) {
+            case SYNC:
+                // Wait for all replicas
+                return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .thenApply(v -> true);
+                    
+            case SEMI_SYNC:
+                // Wait for at least one replica (quorum)
+                return CompletableFuture.anyOf(futures.toArray(new CompletableFuture[0]))
+                    .thenApply(v -> true);
+                    
+            case ASYNC:
+                // Fire and forget
+                return CompletableFuture.completedFuture(true);
+        }
+    }
+}
+5. Client Library / Proxy
+java
+
+
+public class CacheClient {
+    private final ConsistentHashRing ring;
+    private final Map<String, CacheNodeClient> nodeClients;
+    private final int replicationFactor;
+    
+    public CompletableFuture<byte[]> get(String key) {
+        String nodeId = ring.getNode(key);
+        return nodeClients.get(nodeId).get(key)
+            .exceptionally(ex -> {
+                // Fallback to replica on primary failure
+                return getFromReplica(key);
+            });
+    }
+    
+    public CompletableFuture<Boolean> put(String key, byte[] value, long ttl) {
+        List<String> nodes = ring.getNodes(key, replicationFactor);
+        String primary = nodes.get(0);
+        return nodeClients.get(primary).put(key, value, ttl);
+    }
+    
+    // Connection pooling per node
+    private CacheNodeClient getOrCreateClient(String nodeId) {
+        return nodeClients.computeIfAbsent(nodeId, 
+            id -> new CacheNodeClient(id, connectionPool));
+    }
+}
+6. Failure Handling
+Node Failure Detection
+java
+
+
+public class HealthChecker {
+    private final ScheduledExecutorService scheduler;
+    private final Map<String, NodeHealth> nodeHealthMap;
+    private final int failureThreshold = 3;
+    
+    public void startHealthChecks() {
+        scheduler.scheduleAtFixedRate(() -> {
+            for (String nodeId : nodeHealthMap.keySet()) {
+                checkNode(nodeId);
+            }
+        }, 0, 1, TimeUnit.SECONDS);
+    }
+    
+    private void checkNode(String nodeId) {
+        try {
+            boolean healthy = nodeClients.get(nodeId).ping()
+                .get(100, TimeUnit.MILLISECONDS);
+            
+            if (healthy) {
+                nodeHealthMap.get(nodeId).resetFailures();
+            }
+        } catch (Exception e) {
+            NodeHealth health = nodeHealthMap.get(nodeId);
+            health.incrementFailures();
+            
+            if (health.consecutiveFailures >= failureThreshold) {
+                handleNodeFailure(nodeId);
+            }
+        }
+    }
+    
+    private void handleNodeFailure(String nodeId) {
+        // 1. Mark node as down
+        // 2. Promote replica to primary
+        // 3. Update consistent hash ring
+        // 4. Notify configuration service
+    }
+}
+Data Recovery on Node Restart
+java
+
+
+public class DataRecoveryManager {
+    
+    public void recoverData(String nodeId) {
+        // Option 1: Recover from replica
+        List<String> replicas = getReplicasFor(nodeId);
+        for (String replicaId : replicas) {
+            streamDataFrom(replicaId, nodeId);
+        }
+        
+        // Option 2: Recover from WAL (if persistence enabled)
+        replayWAL(nodeId);
+    }
+    
+    private void streamDataFrom(String source, String target) {
+        // Iterate all keys in source, send to target
+        // Use chunked transfer to avoid memory issues
+    }
+}
+7. Advanced Features
+7.1 Hot Key Handling
+java
+
+
+public class HotKeyHandler {
+    private final LoadingCache<String, AtomicInteger> accessCounter;
+    private final int hotKeyThreshold = 1000;  // per second
+    
+    public void recordAccess(String key) {
+        int count = accessCounter.get(key).incrementAndGet();
+        
+        if (count > hotKeyThreshold) {
+            // Replicate hot key to multiple nodes
+            promoteToHotKey(key);
+        }
+    }
+    
+    private void promoteToHotKey(String key) {
+        // 1. Add local cache on proxy layer
+        // 2. Replicate to more nodes
+        // 3. Enable client-side caching for this key
+    }
+}
+7.2 Write-Behind (Async Persistence)
+java
+
+
+public class WriteBehindManager {
+    private final BlockingQueue<WriteOperation> writeQueue;
+    private final PersistenceStore persistenceStore;
+    
+    public void scheduleWrite(String key, byte[] value) {
+        writeQueue.offer(new WriteOperation(key, value));
+    }
+    
+    private void startWriterThread() {
+        Thread writer = new Thread(() -> {
+            List<WriteOperation> batch = new ArrayList<>();
+            while (true) {
+                writeQueue.drainTo(batch, 100);
+                if (!batch.isEmpty()) {
+                    persistenceStore.batchWrite(batch);
+                    batch.clear();
+                }
+                Thread.sleep(10);  // Batch interval
+            }
+        });
+        writer.start();
+    }
+}
+8. API Design
+java
+
+
+public interface DistributedCacheService {
+    
+    // Basic operations
+    CompletableFuture<byte[]> get(String key);
+    CompletableFuture<Boolean> put(String key, byte[] value, Duration ttl);
+    CompletableFuture<Boolean> delete(String key);
+    
+    // Batch operations
+    CompletableFuture<Map<String, byte[]>> multiGet(List<String> keys);
+    CompletableFuture<Boolean> multiPut(Map<String, byte[]> entries, Duration ttl);
+    
+    // Atomic operations
+    CompletableFuture<byte[]> getAndSet(String key, byte[] value);
+    CompletableFuture<Boolean> compareAndSwap(String key, byte[] expected, byte[] newValue);
+    CompletableFuture<Long> increment(String key, long delta);
+    
+    // TTL management
+    CompletableFuture<Boolean> touch(String key, Duration newTtl);
+    CompletableFuture<Duration> getTtl(String key);
+}
+9. Pros and Cons Summary
+Aspect	Pros	Cons
+Consistent Hashing	Minimal data movement on scaling, easy node add/remove	Potential for uneven distribution without virtual nodes
+Replication	High availability, read scalability	Write amplification, consistency complexity
+LRU Eviction	Simple, effective for temporal locality	Not optimal for frequency-based access patterns
+Async Replication	Lower write latency	Risk of data loss, stale reads
+Sync Replication	Strong consistency	Higher write latency, availability trade-off
+In-Memory Storage	Ultra-low latency	Data loss on crash, limited by RAM
+Centralized Proxy	Simpler client, centralized routing logic	Single point of failure, extra network hop
+Client-side Hashing	No proxy bottleneck, lower latency	Complex client, harder to update topology
+10. Interview Discussion Points
+Consistency vs Availability Trade-offs
+
+Strong consistency: Use quorum reads/writes (W + R > N)
+Eventual consistency: Async replication, last-write-wins
+Scaling Strategies
+
+Horizontal: Add more shards
+Vertical: Increase memory per node
+Read scaling: Add replicas
+Cache Invalidation Patterns
+
+Write-through, write-behind, write-around
+TTL-based vs explicit invalidation
+Pub/Sub for cross-node invalidation
+
+
+
+Type a message...
