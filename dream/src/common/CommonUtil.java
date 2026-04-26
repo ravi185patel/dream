@@ -9,6 +9,12 @@ public class CommonUtil {
     public static void print(int arr[]){
         System.out.println(Arrays.toString(arr));
     }
+    public static void print(long arr[]){
+        System.out.println(Arrays.toString(arr));
+    }
+    public static void print(char arr[]){
+        System.out.println(Arrays.toString(arr));
+    }
 
     public static void print(int arr[][]){
         for(int row[]:arr){
@@ -16,5 +22,15 @@ public class CommonUtil {
         }
     }
 
+    public static void print(long arr[][]){
+        for(long row[]:arr){
+            print(row);
+        }
+    }
+    public static void print(char arr[][]){
+        for(char row[]:arr){
+            print(row);
+        }
+    }
 
 }
