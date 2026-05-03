@@ -12,12 +12,8 @@ public class TinyUrlService {
     }
 
     public String setTinyUrl(String url){
-        boolean isUrlExists=redisInstance.isUrlExists(url);
-        if(isUrlExists){
-            return redisInstance.getUrl(url);
-        }
         String tinyUrl = tinyUrlGenerator.generateTinyUrl(url);
-        redisInstance.setTinyUrl(url,tinyUrl);
+        tinyUrl =redisInstance.setTinyUrl(url,tinyUrl);
         return tinyUrl;
     }
 

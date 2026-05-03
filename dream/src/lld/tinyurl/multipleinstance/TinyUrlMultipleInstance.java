@@ -67,6 +67,7 @@ public class TinyUrlMultipleInstance {
         threadUSA.start();
         threadUK.start();
 
+        System.out.println(redisInstance.getUrl("https://example.com/search?q=dp+problems&sort=asc&page=2"));
 //        runnableList.add(runnableUK);
 //        runnableList.add(runnableInd);
 //        runnableList.add(runnableUSA);

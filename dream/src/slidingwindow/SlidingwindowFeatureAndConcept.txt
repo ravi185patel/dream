@@ -1,0 +1,115 @@
+What Is the Sliding Window Pattern?
+At a high level, the sliding window pattern is a way to process all contiguous subarrays
+or substrings of a sequence in linear time by reusing work between neighboring windows.
+
+Instead of recomputing from scratch for every candidate range, you:
+-> Maintain a window [left, right] over the data
+-> Expand the window by moving right (include new elements)
+-> Shrink the window by moving left (remove old elements)
+-> Maintain some window state (sum, frequency map / counter, max, etc.)
+
+
+****Core Intuition: How Sliding Window Actually “Thinks”
+At an intuitive level, the sliding window algorithm does three things:
+
+-> Explore by expanding the window to the right
+-> Repair by shrinking from the left when the window becomes invalid
+-> Optimize by tracking the best valid window (max/min length, sum, etc.)
+
+Expand → shrink → update
+Mentally, every variable-size sliding window follows this cycle:
+
+-> Expand: move right and update the window state (sum, counts, etc.)
+-> Shrink: while the window violates your condition, move left and undo the state
+-> Update: now that the window is valid again, update your answer
+
+********* Window invariant **********
+The window invariant is the condition you maintain after the shrink loop finishes.
+
+Examples:
+-> “Window contains at most k distinct characters”
+-> “Window sum is ≤ target”
+-> “Window contains all characters of T in required frequencies”
+
+
+*************VIMP**************
+********* Memory and state transitions ********************
+Sliding window is powerful because state changes are local:
+
+-> When you expand, you only touch the new element at right
+-> When you shrink, you only touch the old element at left
+
+*****Typical window state structures: ********
+
+-> Scalar: sum, count of zeros, count of 1s
+-> Frequency map / counter: counts per character/number
+-> Set: presence/absence of elements (e.g., no duplicates)
+-> Deque: monotonic queue for max/min in windo
+
+
+********************
+How to Identify Sliding Window Problems Instantly
+You don’t want to recognize sliding window halfway through a brute-force attempt.
+Here’s a checklist and language cues to spot them immediately.
+
+Quick checklist
+Use sliding window if:
+
+-> You are working over a single array or string
+-> The problem asks about a contiguous subarray/substring
+
+You need to optimize some metric:
+-> Longest/shortest window
+-> Maximum/minimum sum, average, or count
+-> Number of windows satisfying a constraint
+-> You can maintain the state with incremental updates
+If any of these are false, step back and consider other patterns
+(two pointers, prefix sums, DP).
+
+********** Phrases in problem statements ************
+Strong sliding window signals:
+
+-> “contiguous subarray” or “substring”
+-> “longest / shortest”
+-> “at most k”, “at least k”
+-> “no more than k”, “no less than k”
+-> “maximum number of … in any window of size k”
+Examples:
+-> “Find the length of the longest substring without repeating characters”
+-> “Find the minimum length subarray with sum ≥ target”
+-> “Given a binary array, return the maximum number of consecutive 1s if you can flip at most k zeros”
+
+**** Deciding: fixed-size vs variable-size sliding window ***
+Ask:
+
+1) Is window size fixed?
+
+-> Text: “window of size k”, “subarray of length k”
+-> Use a fixed-size sliding window (no shrink loop; left just trails right by k).
+
+2)  Is window size flexible?
+-> Text: “longest / shortest”, “at most k distinct”, “sum at least target”
+-> Use a variable-size sliding window with the expand–shrink–update pattern.
+
+When in doubt, start with variable-size; fixed-size is just a simpler special case.
+
+********** Sliding window vs prefix sum vs DP vs two pointers ********
+If you’re unsure whether to use sliding window:
+
+*** Consider prefix sum when:
+
+-> You need exact sum equals k and values can be negative
+-> Order still matters, but greedy expand/shrink logic fails
+
+See: Sliding Window vs Prefix Sum.
+*** Consider classic two pointers when:
+
+-> You care about pairs or endpoints, not the whole range in between
+-> Input is or can be sorted
+Problems like 2-sum (sorted), 3-sum, container with most water
+
+See: Sliding Window vs Two Pointers.
+****Consider dynamic programming when:
+You’re dealing with subsequences (non-contiguous)
+-> The state depends on multiple earlier positions, not just the current window
+-> For deeper pattern-recognition pitfalls, read

@@ -1,0 +1,74 @@
+********* Fixed-size sliding window *********
+Definition: The window always contains exactly k elements.
+
+Examples:
+
+“Max sum of any subarray of size k”
+“Number of subarrays of length k with average ≥ threshold”
+Key traits:
+
+No validity condition; size itself is the constraint
+Left pointer increments when right reaches k - 1
+
+*********  Variable-size sliding window *********
+Definition: Window grows and shrinks based on a validity constraint.
+
+Examples:
+
+“Longest substring without repeating characters”
+“Longest substring with at most k distinct characters”
+“Minimum window substring that contains all characters of t”
+Key traits:
+
+Expand until invalid, then shrink until valid
+Often used to find optimal window size (max or min)
+
+********* Two-ended windows *********
+Sometimes both ends move in more complex ways:
+
+One pointer sweeps, the other follows with conditional jumps
+Example: partitioning problems where you maintain a window of “good” elements,
+but occasionally reset left after a hard boundary
+
+This is still sliding window as long as:
+You maintain a contiguous interval
+You update state only when left or right moves
+
+********* Shrink-to-fit vs grow-to-fit windows *********
+Shrink-to-fit:
+Expand aggressively
+Shrink only when the window becomes invalid (“too big”, “too many distinct chars”)
+Common for “longest” / “at most k” problems
+
+Grow-to-fit:
+Expand until the window first becomes valid
+Then shrink to find the smallest valid window
+Common for “minimum window substring” or “shortest subarray with sum ≥ target”
+Recognizing which one you’re using prevents subtle bugs in the shrink loop.
+
+********* Monotonic sliding windows (deques) *********
+For some problems, basic counters aren’t enough:
+
+“Sliding window maximum”
+“Sliding window minimum”
+You want to maintain the window’s max/min in O(1) without scanning the entire window each time.
+
+The trick is to use a monotonic deque:
+-> Store indices in decreasing (for max) or increasing (for min) order of values
+-> Pop from back while the new element is “better”
+-> Pop from front if it falls out of the window
+This is a specialized but important variation of the sliding window algorithm.
+You’ll see it in harder sliding window LeetCode interview questions.
+
+********* 2D / matrix windows *********
+For 2D problems (submatrices, grids), you often:
+Fix two row boundaries
+Compress rows into a 1D array of column sums
+Run a 1D sliding window or Kadane-style algorithm on that
+
+
+| Pattern        | Best When                                                                | Typical Keywords                            | Example Problem                                         |
+| -------------- | ------------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------------- |
+| Sliding Window | Contiguous subarray/substring, optimize window size/value, expand/shrink | longest, shortest, at most k, consecutive   | Longest substring without repeats, max consecutive ones |
+| Two Pointers   | Sorted input, pair/triplet endpoints, no need for all in-between         | pair sum, triplet, container, partition     | Two Sum II, 3Sum, Container With Most Water             |
+| Prefix Sum     | Sum equals k, negative numbers allowed, count subarrays                  | subarray sum, equal to k, range sum queries | Subarray Sum Equals K, longest subarray sum = k         |

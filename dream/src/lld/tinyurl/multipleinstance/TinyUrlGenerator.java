@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Random;
 
 public class TinyUrlGenerator {
+    // here we can use redis for counter which we can use to generate unique string.
     Random random;
     public static String chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567899";
     public static String host = "tinyurl.com";

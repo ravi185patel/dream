@@ -2,32 +2,37 @@ package lld.tinyurl.multipleinstance;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RedisInstance {
     public Map<String,String> tinyUrlToUrlMap;
     public Map<String,String> urlToTinyUrlMap;
 
     public RedisInstance() {
-        tinyUrlToUrlMap = new HashMap<>();
-        urlToTinyUrlMap = new HashMap<>();
+        tinyUrlToUrlMap = new ConcurrentHashMap<>();
+        urlToTinyUrlMap = new ConcurrentHashMap<>();
     }
 
-    public void setTinyUrl(String url, String tinyUrl){
-        tinyUrlToUrlMap.put(tinyUrl,url);
+    public synchronized String setTinyUrl(String url, String tinyUrl){
+        if(urlToTinyUrlMap.containsKey(url)){
+            return urlToTinyUrlMap.get(url);
+        }
         urlToTinyUrlMap.put(url,tinyUrl);
+        tinyUrlToUrlMap.put(tinyUrl,url);
+        return tinyUrl;
     }
 
-    public void removeTinyUrl(String url){
+    public synchronized void removeTinyUrl(String url){
         String tinyUrl = urlToTinyUrlMap.get(url);
         tinyUrlToUrlMap.remove(tinyUrl);
         urlToTinyUrlMap.remove(url);
     }
 
-    public boolean isUrlExists(String url){
+    public synchronized boolean isUrlExists(String url){
         return urlToTinyUrlMap.containsKey(url);
     }
 
-    public String getUrl(String tinyUrl){
+    public synchronized String getUrl(String tinyUrl){
         return tinyUrlToUrlMap.get(tinyUrl);
     }
 

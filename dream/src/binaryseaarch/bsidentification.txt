@@ -1,0 +1,101 @@
+The Decision Tree
+
+Question 1: What's the data structure?
+├─ Sorted Array → Continue to Question 2
+├─ Rotated Sorted Array → Rotated Binary Search ✓
+├─ 2D Matrix (sorted properties) → 2D Binary Search ✓
+├─ No explicit array, but answer space → Binary Search on Answer ✓
+└─ Unsorted Array → Binary search NOT applicable (use hash map/linear)
+
+Question 2: What's the goal?
+├─ Find exact element → Classic Binary Search ✓
+├─ Find first/last occurrence → Lower/Upper Bound ✓
+├─ Minimize maximum / Maximize minimum → Binary Search on Answer ✓
+├─ Find insertion position → Classic Binary Search variant ✓
+└─ Find maximum/minimum element → May not need binary search
+
+Question 3: Is there a monotonic property?
+├─ Yes (sorted, or monotonic feasibility) → Binary Search ✓
+├─ No → Binary search NOT applicable
+└─ Unsure → Check if "if x works, does x+1 work?" or vice versa
+
+Question 4: What's the time constraint?
+├─ Need O(log n) → Binary Search ✓
+├─ O(n) acceptable and data unsorted → Linear search
+└─ Need O(1) → Binary search won't help (use hash map)
+
+
+Quick Recognition Checklist
+Use Classic Binary Search when you see:
+
+✅ "Find target in sorted array"
+✅ "Search for element"
+✅ "Determine if element exists"
+✅ Array is explicitly sorted
+✅ Need O(log n) lookup
+Use Binary Search on Answer when you see:
+
+✅ "Minimize the maximum"
+✅ "Maximize the minimum"
+✅ "Find the smallest/largest value such that..."
+✅ Answer has a clear range [min, max]
+✅ Can verify if a candidate answer works
+Use Rotated/Modified Binary Search when you see:
+
+✅ "Rotated sorted array"
+✅ "2D matrix" with sorted rows/columns
+✅ "Find minimum in rotated array"
+✅ Partially sorted structure
+
+Don't use Binary Search when you see:
+
+❌ Unsorted array (use hash map or linear search)
+❌ Need to find all elements (binary search finds one)
+❌ No monotonic property
+❌ Dynamic data with frequent insertions (use BST or heap)
+
+
+Important :
+# Classic binary search: left <= right
+while left <= right:
+    ...
+    return -1  # Not found
+
+# Lower/upper bound: left < right
+while left < right:
+    ...
+    return left  # Return position
+
+
+
+Complexity Analysis
+Time Complexity
+
+Classic Binary Search: O(log n)
+-Each iteration eliminates half the search space
+-Maximum iterations: log₂(n)
+-Example: Array of 1,000,000 elements → ~20 iterations
+
+
+Binary Search on Answer: O(log(max - min) × C)
+-log(max - min): Binary search iterations on answer space
+-C: Cost of feasibility check (often O(n))
+-Example: Koko Eating Bananas → O(n log m) where m = max(piles)
+
+Rotated Array Search: O(log n)
+-Same as classic, but with additional logic to identify sorted half
+
+
+Space Complexity
+Iterative Implementation: O(1)
+-Only uses a constant number of variables (left, right, mid)
+
+Recursive Implementation: O(log n)
+-Call stack depth equals number of iterations
+-Generally prefer iterative for space efficiency
+
+When Binary Search Is NOT O(log n)
+
+Binary search on answer can have higher complexity:
+-Koko Eating Bananas: O(n log m) — feasibility check is O(n)
+-Split Array Largest Sum: O(n log(sum)) — feasibility check is O(n)

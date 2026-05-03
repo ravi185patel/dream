@@ -1,0 +1,26 @@
+
+2-buckets partition/subset-sum
+parititon equal subset sum
+subset sum
+target sum (+,-)
+
+
+Order
+Allocate minimum pages
+painter's partition
+
+capacity buckets
+minimum number of bins
+can pack intk k bins ?
+boats to save people
+
+graph coloring / constraint buckets
+graph k-coloring
+exam/course scheduling into k times slots
+bipratite check
+
+team formation
+partition into k teams with eqaul size
+partition into pairs with a condition
+grouping into consecutive runs
+
