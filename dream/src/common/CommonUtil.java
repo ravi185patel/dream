@@ -12,6 +12,10 @@ public class CommonUtil {
     public static void print(long arr[]){
         System.out.println(Arrays.toString(arr));
     }
+
+    public static void print(double arr[]){
+        System.out.println(Arrays.toString(arr));
+    }
     public static void print(char arr[]){
         System.out.println(Arrays.toString(arr));
     }
