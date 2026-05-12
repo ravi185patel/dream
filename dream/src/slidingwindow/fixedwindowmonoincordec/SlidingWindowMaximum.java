@@ -5,6 +5,17 @@ import common.CommonUtil;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+/*
+Do I care about ALL elements ordering? No
+Can weaker elements be permanently ignored? Yes
+
+sliding window maximum
+minimum in window
+next greater element
+maintain monotonic property
+best element in range
+
+ */
 public class SlidingWindowMaximum {
     public static void main(String[] args) {
         CommonUtil.print(maxSlidingWindow(new int[]{1,3,-1,-3,5,3,6,7},3));

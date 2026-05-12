@@ -79,23 +79,6 @@ public class SlidingWindowMedian {
         }
     }
 
-    public static void removeOp(int k,int index,PriorityQueue<Integer>minPq,
-                                PriorityQueue<Integer>maxPq){
-        while(!maxPq.isEmpty() && maxPq.peek() < index+k){
-            maxPq.poll();
-        }
-        maxPq.remove(index);
-        arrange(minPq,maxPq);
-    }
-
-    public static void arrange(PriorityQueue<Integer> minPq,PriorityQueue<Integer> maxPq){
-        if(maxPq.size() - minPq.size() > 1){
-            minPq.add(maxPq.poll());
-        }else{
-            maxPq.add(minPq.poll());
-        }
-    }
-
     public static double[] helperBF(int nums[],int k){
         int length = nums.length;
         double[] ans =new double[length-k+1];
