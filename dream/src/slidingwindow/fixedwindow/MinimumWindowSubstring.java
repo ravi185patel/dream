@@ -11,6 +11,14 @@ public class MinimumWindowSubstring {
         System.out.println(minWindow( "a",  "aa"));
     }
 
+    /*
+       tMap -> char with count
+       sMap -> char with count
+
+       when character count matched so string formed.
+       formed == t.length -> reduce it from sMap.
+
+     */
     public static String minWindow(String s, String t) {
         int start=0,length=s.length(),tLength=t.length(),min = Integer.MAX_VALUE;
         if(length < tLength) return "";

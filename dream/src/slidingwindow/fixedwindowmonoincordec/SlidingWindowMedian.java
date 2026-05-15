@@ -144,7 +144,7 @@ public class SlidingWindowMedian {
         }
 
         private void remove(int num) {
-
+            /// sliding window start pointer
             if (num <= left.lastKey()) {
                 decrease(left, num);
                 leftSize--;
